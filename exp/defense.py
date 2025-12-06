@@ -234,6 +234,8 @@ for prompt in tqdm(attack_prompts):
         user_prompt = prompt["goal"]
     elif args.attacker == "Just-Eval":
         user_prompt = prompt["instruction"]
+    elif args.attacker == "AdvBench":
+        user_prompt = prompt["goal"]  # ← YE ADD KAR
     else:
         user_prompt = prompt["prompt"]
 

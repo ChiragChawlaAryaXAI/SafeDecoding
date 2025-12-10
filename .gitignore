@@ -173,6 +173,5 @@ peft/.github/
 # More test things
 wandb
 
-# Exp outputs
-exp_outputs
+
 

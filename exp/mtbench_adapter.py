@@ -68,16 +68,21 @@ class SafeDecodingModelAdapter:
             device=self.device
         )
         
-        # Load LoRA adapter
+        # Load LoRA adapter as both base and expert
         lora_path = f"../lora_modules/{self.model_name}"
         print(f"Loading LoRA from {lora_path}...")
+
+        # Load expert adapter
         self.model = PeftModel.from_pretrained(
             self.model, 
             lora_path, 
             adapter_name="expert"
         )
-        
-        # Initialize SafeDecoding
+
+        # Load same LoRA again as "base" adapter
+        self.model.load_adapter(lora_path, adapter_name="base")
+
+        # Initialize SafeDecoding with both adapters
         adapter_names = ['base', 'expert']
         self.safe_decoder = SafeDecoding(
             self.model,

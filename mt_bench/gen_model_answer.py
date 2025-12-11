@@ -24,10 +24,10 @@ from utils.safe_decoding import SafeDecoding
 from utils.string_utils import PromptManager
 from utils.model import GPT
 
-openai_key = None # Please set the OpenAI API key here
-if openai_key is None:
-    raise ValueError("Please set the OpenAI API key in Line 27.")
-
+# NEW (lines 27-29):
+import os
+openai_key = os.environ.get("OPENAI_API_KEY", None)
+# Remove the check - we'll only use it if Paraphrase defense is selected
 
 def run_eval(
     model_path,
@@ -120,8 +120,8 @@ def get_model_answers(
     else:
         raise ValueError("Model path should contain llama or vicuna.")
         
-    model = PeftModel.from_pretrained(model, "/llm-defense/lora_modules/"+lora_name, adapter_name="expert")
-
+    model = PeftModel.from_pretrained(model, "../lora_modules/"+lora_name, adapter_name="expert")
+    model.base_model.peft_config["base"] = model.base_model.peft_config["expert"]
     safe_decoder = SafeDecoding(model, 
                                 tokenizer, 
                                 adapter_names = ['base', 'expert'], 

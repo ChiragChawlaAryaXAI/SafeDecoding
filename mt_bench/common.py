@@ -405,26 +405,47 @@ def play_a_match_pair(match: MatchPair, output_file: str):
 
 
 def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
+    import os
+    from openai import OpenAI
+    
+    # Get API configuration
     if api_dict is not None:
-        openai.api_base = api_dict["api_base"]
-        openai.api_key = api_dict["api_key"]
+        api_key = api_dict.get("api_key")
+        api_base = api_dict.get("api_base", "https://api.openai.com/v1")
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        api_base = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")
+    
+    # Map GPT models to Fireworks
+    model_mapping = {
+        'gpt-4': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+        'gpt-4-0314': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+        'gpt-4-0613': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+        'gpt-3.5-turbo': 'accounts/fireworks/models/qwen3-8b',
+    }
+    
+    actual_model = model_mapping.get(model, model)
+    
+    # Initialize OpenAI client (works with Fireworks)
+    client = OpenAI(api_key=api_key, base_url=api_base)
+    
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
-            response = openai.ChatCompletion.create(
-                model=model,
+            response = client.chat.completions.create(
+                model=actual_model,
                 messages=messages,
                 n=1,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            output = response["choices"][0]["message"]["content"]
+            output = response.choices[0].message.content
             break
-        except openai.error.OpenAIError as e:
+        except Exception as e:
             print(type(e), e)
             time.sleep(API_RETRY_SLEEP)
-
+    
     return output
 
 

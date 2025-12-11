@@ -127,6 +127,16 @@ elif args.defender == 'Self-Reminder':
 if args.attacker == "AdvBench":
     with open('../datasets/harmful_behaviors_custom.json', 'r', encoding='utf-8') as file:
         attack_prompts = json.load(file)
+
+# ADD THESE TWO SECTIONS RIGHT AFTER:
+elif args.attacker == "SAP30":
+    with open('../datasets/sap30.json', 'r', encoding='utf-8') as file:
+        attack_prompts = json.load(file)
+    logging.info(f"✅ Loaded SAP30: {len(attack_prompts)} behaviors")
+elif args.attacker == "HEx-PHI":
+    with open('../datasets/hexphi.json', 'r', encoding='utf-8') as file:
+        attack_prompts = json.load(file)
+    logging.info(f"✅ Loaded HEx-PHI: {len(attack_prompts)} prompts")
 elif args.attacker in ["GCG", "AutoDAN", "PAIR"]:
     attack_prompts = load_dataset('flydust/SafeDecoding-Attackers', split="train")
     attack_prompts = attack_prompts.filter(lambda x: x['source'] == args.attacker)
@@ -231,7 +241,7 @@ for prompt in tqdm(attack_prompts):
         user_prompt = prompt["goal"]
     elif args.attacker == "Just-Eval":
         user_prompt = prompt["instruction"]
-    elif args.attacker == "AdvBench":
+    elif args.attacker in ["AdvBench", "SAP30", "HEx-PHI"]:  # ← ADD SAP30 & HEx-PHI
         user_prompt = prompt["goal"]
     else:
         user_prompt = prompt["prompt"]

@@ -69,31 +69,42 @@ def extract_content(tag, text):
 
 class GPTJudge:
     def __init__(self, policy, mp=1, judge_model=None, api=None):
-        # Default to best available model
-        if judge_model is None or 'gpt' in judge_model.lower():
-            self.judger = "accounts/fireworks/models/llama-v3p3-70b-instruct"
+        # Available Groq models
+        available_models = {
+            'llama-3.3-70b-versatile': 'llama-3.3-70b-versatile',
+            'llama-3.1-70b-versatile': 'llama-3.1-70b-versatile', 
+            'llama-3.1-8b-instant': 'llama-3.1-8b-instant',
+            'llama3-70b-8192': 'llama3-70b-8192',
+            'llama-4-scout': 'meta-llama/llama-4-scout-17b-16e-instruct',
+            'gpt-4': 'llama-3.3-70b-versatile',  # Fallback
+            'gpt-3.5': 'llama-3.1-70b-versatile',  # Fallback
+        }
+        
+        # Use Groq models
+        if judge_model is None:
+            self.judger = "llama-3.3-70b-versatile"
+        elif judge_model in available_models:
+            self.judger = available_models[judge_model]
+        elif any(key in judge_model.lower() for key in ['gpt-4', 'gpt4']):
+            self.judger = "llama-3.3-70b-versatile"
+        elif any(key in judge_model.lower() for key in ['gpt-3.5', 'gpt3.5']):
+            self.judger = "llama-3.1-70b-versatile"
+        elif 'llama-4' in judge_model.lower() or 'scout' in judge_model.lower():
+            self.judger = "meta-llama/llama-4-scout-17b-16e-instruct"
         else:
-            model_mapping = {
-                'gpt-4': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-                'gpt-4-0613': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-                'gpt-3.5-turbo': 'accounts/fireworks/models/qwen3-8b',
-                'gpt-3.5-turbo-1106': 'accounts/fireworks/models/qwen3-8b',
-            }
-            self.judger = model_mapping.get(judge_model, judge_model)
+            self.judger = judge_model  # Use as-is
             
         self.mp = mp
         self.api = api
         self.policy = self.policy_parse(policy)
         
-        # Initialize Fireworks client
+        # Initialize Groq client
         if self.api:
-            self.client = OpenAI(
-                api_key=self.api,
-                base_url="https://api.fireworks.ai/inference/v1"
-            )
-            logging.info(f"✅ Initialized Fireworks AI with model: {self.judger}")
+            from groq import Groq
+            self.client = Groq(api_key=self.api)
+            logging.info(f"✅ Initialized Groq with model: {self.judger}")
         else:
-            raise ValueError("API key is required for Fireworks AI")
+            raise ValueError("API key is required for Groq")
     
     def policy_parse(self, policy_model):
         if 'gpt' in policy_model:

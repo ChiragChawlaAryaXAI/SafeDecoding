@@ -52,7 +52,7 @@ def get_args():
     parser.add_argument("--multi_processing", type=int, default=20)
     parser.add_argument("--GPT_API", type=str, default=None)
     parser.add_argument("--disable_GPT_judge", action="store_true", dest="disable_GPT_judge", help="Disable GPT judge")
-
+    parser.add_argument("--judge_model", type=str, default=None, help="Judge model for evaluation (e.g., llama-3.3-70b-versatile, qwen2.5-72b-instruct)")
     return parser.parse_args()
 
 args = get_args()
@@ -411,7 +411,9 @@ if args.eval_mode:
         responses = [result['output'] for result in results]
 
         if not args.disable_GPT_judge:
-            gpt_judge = GPTJudge('gpt', mp=args.multi_processing, api=args.GPT_API)
+            # Use custom judge model if specified
+            judge_model = args.judge_model if args.judge_model else None
+            gpt_judge = GPTJudge('gpt', mp=args.multi_processing, judge_model=judge_model, api=args.GPT_API)
             goals_responses_pairs = []
             for i in range(len(instructions)):
                 goals_responses_pairs.append((goals[i], responses[i]))

@@ -11,22 +11,21 @@ class GPT:
         self.T = temperature
         self.seed = seed
         
-        # Map OpenAI models to Fireworks models
-        model_mapping = {
-            'gpt-4': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-            'gpt-4-0314': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-            'gpt-4-0613': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-            'gpt-3.5-turbo': 'accounts/fireworks/models/qwen3-8b',
-            'gpt-3.5-turbo-1106': 'accounts/fireworks/models/qwen3-8b',
-        }
+        # Map to Groq models (only for backward compatibility)
+        if 'gpt-4' in model_name:
+            self.actual_model = 'llama-3.3-70b-versatile'
+        elif 'gpt-3.5' in model_name:
+            self.actual_model = 'llama-3.1-70b-versatile'
+        elif 'llama' in model_name.lower():
+            self.actual_model = model_name
+        elif 'qwen' in model_name.lower():
+            self.actual_model = model_name
+        else:
+            self.actual_model = model_name
         
-        self.actual_model = model_mapping.get(model_name, model_name)
-        
-        # Initialize Fireworks client
-        self.client = OpenAI(
-            api_key=api,
-            base_url="https://api.fireworks.ai/inference/v1"
-        )
+        # Initialize Groq client
+        from groq import Groq
+        self.client = Groq(api_key=api)
         
 
     def __call__(self, prompt, n:int=1, debug=False, **kwargs: Any) -> Any:

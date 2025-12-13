@@ -125,7 +125,7 @@ elif args.defender == 'Self-Reminder':
 
 # Load attack prompts
 if args.attacker == "AdvBench":
-    with open('../datasets/harmful_behaviors_custom.json', 'r', encoding='utf-8') as file:
+    with open('../datasets/advbench_harmful_behaviors.json', 'r', encoding='utf-8') as file:
         attack_prompts = json.load(file)
 
 # ADD THESE TWO SECTIONS RIGHT AFTER:

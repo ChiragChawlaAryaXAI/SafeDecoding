@@ -1,15 +1,10 @@
 import sys
 sys.path.append('..')
-import multiprocessing as mp
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-import time
 import logging
 from openai import OpenAI
+from tqdm import tqdm
 
 class DictJudge:
-    """Dictionary-based judge (same as original)"""
-    
     def __init__(self, is_api_models = False) -> None:
         if is_api_models:
             self.refusal_string = [
@@ -52,7 +47,6 @@ class DictJudge:
 
 
 def extract_content(tag, text):
-    """Extract content from tagged text"""
     start_idx = text.find(tag)
     if start_idx == -1:
         return None
@@ -71,47 +65,8 @@ def extract_content(tag, text):
 
 
 class GPTJudge_OpenRouter:
-    """GPT Judge using OpenRouter API"""
-    
     def __init__(self, policy, mp=1, judge_model=None, api=None):
-        # OpenRouter model mapping
-        self.openrouter_models = {
-            'gpt-4': 'openai/gpt-4-turbo',
-            'gpt-4o': 'openai/gpt-4o',
-            'gpt-4-turbo': 'openai/gpt-4-turbo',
-            'gpt-3.5': 'openai/gpt-3.5-turbo',
-            'gpt-3.5-turbo': 'openai/gpt-3.5-turbo',
-            
-            # Llama models
-            'llama-4-scout': 'meta-llama/llama-3.3-70b-instruct',
-            'llama-3.3-70b': 'meta-llama/llama-3.3-70b-instruct',
-            'llama-3.3-70b-versatile': 'meta-llama/llama-3.3-70b-instruct',
-            'llama-3.1-70b': 'meta-llama/llama-3.1-70b-instruct',
-            'llama-3.1-70b-versatile': 'meta-llama/llama-3.1-70b-instruct',
-            'llama-3.1-8b': 'meta-llama/llama-3.1-8b-instruct',
-            'llama-3.1-8b-instant': 'meta-llama/llama-3.1-8b-instruct',
-            
-            # Claude models
-            'claude-3.5-sonnet': 'anthropic/claude-3.5-sonnet',
-            'claude-3-opus': 'anthropic/claude-3-opus',
-            
-            # Gemini models (FREE!)
-            'gemini-2.0-flash': 'google/gemini-2.0-flash-exp:free',
-            'gemini-pro': 'google/gemini-pro',
-            
-            # Reasoning models
-            'deepseek-r1': 'deepseek/deepseek-r1',
-            'o1-preview': 'openai/o1-preview',
-        }
-        
-        # Use OpenRouter models
-        if judge_model is None:
-            self.judger = "meta-llama/llama-3.3-70b-instruct"
-        elif judge_model.lower() in self.openrouter_models:
-            self.judger = self.openrouter_models[judge_model.lower()]
-        else:
-            self.judger = judge_model  # Use as-is
-            
+        self.judger = judge_model if judge_model else "meta-llama/llama-3.3-70b-instruct:free"
         self.mp = mp
         self.api = api
         self.policy = self.policy_parse(policy)
@@ -125,10 +80,6 @@ class GPTJudge_OpenRouter:
             logging.info(f"✅ Initialized OpenRouter with model: {self.judger}")
         else:
             raise ValueError("API key is required for OpenRouter")
-        
-        # Check if model supports reasoning
-        self.supports_reasoning = any(x in self.judger.lower() 
-                                     for x in ['o1', 'o3', 'deepseek-r1', '/r1'])
     
     def policy_parse(self, policy_model):
         if 'gpt' in policy_model:
@@ -195,25 +146,18 @@ class GPTJudge_OpenRouter:
             prompt = judge_template % QApair
             
             try:
-                # Build request kwargs
-                request_kwargs = {
-                    "model": self.judger,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.0,
-                    "max_tokens": 2048,
-                    "stream": False
-                }
-                
-                # Add reasoning support if model supports it
-                if self.supports_reasoning:
-                    request_kwargs['extra_body'] = {'reasoning': {'enabled': True}}
-                
-                response = self.client.chat.completions.create(**request_kwargs)
-                responses.append(response)
+                completion = self.client.chat.completions.create(
+                    extra_headers={},
+                    extra_body={},
+                    model=self.judger,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0,
+                    max_tokens=2048
+                )
+                responses.append(completion)
                 
             except Exception as e:
                 logging.error(f"❌ Error on pair {idx}: {str(e)}")
-                # Dummy response on error
                 class DummyResponse:
                     def __init__(self):
                         self.choices = [type('obj', (object,), {
@@ -223,7 +167,6 @@ class GPTJudge_OpenRouter:
                         })()]
                 responses.append(DummyResponse())
 
-        # Parse responses
         contents = [response.choices[0].message.content for response in responses]
         scores = [extract_content("#thescore:", content) for content in contents]
         reasons = [extract_content("#thereason:", content) for content in contents]

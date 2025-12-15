@@ -10,10 +10,8 @@ import os
 import re
 import time
 from typing import Optional
-
 import openai
 import anthropic
-
 from fastchat.model.model_adapter import (
     get_conversation_template,
     ANTHROPIC_MODEL_LIST,
@@ -232,6 +230,63 @@ def play_a_match_single(match: MatchPair, output_file: str):
     return result
 
 
+def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
+    import os
+    from groq import Groq
+    
+    # Get API configuration
+    if api_dict is not None:
+        api_key = api_dict.get("api_key")
+    else:
+        api_key = os.environ.get("GROQ_API_KEY")
+    
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not found")
+    
+    # Map GPT models to Groq models
+    model_mapping = {
+        'gpt-4': 'llama-3.3-70b-versatile',
+        'gpt-4-0314': 'llama-3.3-70b-versatile',
+        'gpt-4-0613': 'llama-3.3-70b-versatile',
+        'gpt-4-turbo': 'llama-3.3-70b-versatile',
+        'gpt-3.5-turbo': 'llama-3.1-8b-instant',
+        'gpt-3.5-turbo-1106': 'llama-3.1-8b-instant',
+    }
+    
+    actual_model = model_mapping.get(model, 'llama-3.3-70b-versatile')
+    
+    # Initialize Groq client
+    client = Groq(api_key=api_key)
+    
+    output = API_ERROR_OUTPUT
+    for attempt in range(API_MAX_RETRY):
+        try:
+            messages = conv.to_openai_api_messages()
+            completion = client.chat.completions.create(
+                model=actual_model,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            output = completion.choices[0].message.content
+            break
+        except Exception as e:
+            print(f"Groq API Error (attempt {attempt+1}/{API_MAX_RETRY}): {type(e).__name__}: {e}")
+            if attempt < API_MAX_RETRY - 1:
+                time.sleep(API_RETRY_SLEEP)
+            else:
+                print(f"Failed after {API_MAX_RETRY} attempts")
+                output = API_ERROR_OUTPUT
+    
+    return output
+
+
+
+
+# Keep other functions unchanged (run_judge_pair, play_a_match_pair, etc.)
+# ... rest of the file remains the same ...
+
+
 def run_judge_pair(question, answer_a, answer_b, judge, ref_answer, multi_turn=False):
     kwargs = {}
     model = judge.model_name
@@ -404,90 +459,9 @@ def play_a_match_pair(match: MatchPair, output_file: str):
     return result
 
 
-def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
-    import os
-    from groq import Groq
-    
-    # Get API configuration
-    if api_dict is not None:
-        api_key = api_dict.get("api_key")
-    else:
-        api_key = os.environ.get("GROQ_API_KEY")
-    
-    if not api_key:
-        raise ValueError("GROQ_API_KEY not found")
-    
-    # Map GPT models to Groq models
-    model_mapping = {
-        'gpt-4': 'llama-3.3-70b-versatile',
-        'gpt-4-0314': 'llama-3.3-70b-versatile',
-        'gpt-4-0613': 'llama-3.3-70b-versatile',
-        'gpt-4-turbo': 'llama-3.3-70b-versatile',
-        'gpt-3.5-turbo': 'llama-3.1-8b-instant',
-        'gpt-3.5-turbo-1106': 'llama-3.1-8b-instant',
-    }
-    
-    actual_model = model_mapping.get(model, 'llama-3.3-70b-versatile')
-    
-    # Initialize Groq client
-    client = Groq(api_key=api_key)
-    
-    output = API_ERROR_OUTPUT
-    for _ in range(API_MAX_RETRY):
-        try:
-            messages = conv.to_openai_api_messages()
-            completion = client.chat.completions.create(
-                model=actual_model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            output = completion.choices[0].message.content
-            break
-        except Exception as e:
-            print(f"Groq API Error: {type(e).__name__}: {e}")
-            time.sleep(API_RETRY_SLEEP)
-    
-    return output
 
 
-def chat_completion_openai_azure(model, conv, temperature, max_tokens, api_dict=None):
-    openai.api_type = "azure"
-    openai.api_version = "2023-07-01-preview"
-    if api_dict is not None:
-        openai.api_base = api_dict["api_base"]
-        openai.api_key = api_dict["api_key"]
-    else:
-        openai.api_base = os.environ["AZURE_OPENAI_ENDPOINT"]
-        openai.api_key = os.environ["AZURE_OPENAI_KEY"]
 
-    if "azure-" in model:
-        model = model[6:]
-
-    output = API_ERROR_OUTPUT
-    for _ in range(API_MAX_RETRY):
-        try:
-            messages = conv.to_openai_api_messages()
-            response = openai.ChatCompletion.create(
-                engine=model,
-                messages=messages,
-                n=1,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            output = response["choices"][0]["message"]["content"]
-            break
-        except openai.error.OpenAIError as e:
-            print(type(e), e)
-            time.sleep(API_RETRY_SLEEP)
-        except openai.error.InvalidRequestError as e:
-            print(type(e), e)
-            break
-        except KeyError:
-            print(response)
-            break
-
-    return output
 
 
 def chat_completion_anthropic(model, conv, temperature, max_tokens, api_dict=None):

@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from safe_eval_openrouter import DictJudge, GPTJudge_OpenRouter
 
-API_KEY = "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"
+API_KEY = "]daaldo"
 JUDGE_MODEL = "meta-llama/llama-3.3-70b-instruct:free"  # Free model
 
 # Files to evaluate

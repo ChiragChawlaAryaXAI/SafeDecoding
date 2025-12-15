@@ -27,6 +27,7 @@ def get_args():
     parser.set_defaults(is_defense=True)
     parser.add_argument("--eval_mode_off", action="store_false", dest="eval_mode", help="Disable evaluation mode (Default: True)")
     parser.set_defaults(eval_mode=True)
+    parser.add_argument("--num_samples", type=int, default=None, help="Limit number of samples (default: all)")
 
     # Defense Parameters
     parser.add_argument("--defender", type=str, default='SafeDecoding')
@@ -157,6 +158,14 @@ elif args.attacker == "custom":
         attack_prompts = json.load(file)
 elif args.attacker == "Just-Eval":
     attack_prompts = load_dataset('re-align/just-eval-instruct', split="test")
+    
+    # ADD THIS SECTION ↓
+    if args.num_samples is not None:
+        # Convert to list and limit
+        attack_prompts = list(attack_prompts)[:args.num_samples]
+        logging.info(f"✅ Limited Just-Eval to {len(attack_prompts)} samples")
+    else:
+        logging.info(f"✅ Loaded Just-Eval: {len(attack_prompts)} samples")
 else:
     raise ValueError("Invalid attacker name.")
 
@@ -459,11 +468,12 @@ if args.eval_mode:
             
             try:
                 # Add just_eval to path
-                just_eval_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../just_eval/just_eval'))
+                just_eval_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../just_eval'))
                 if just_eval_path not in sys.path:
                     sys.path.insert(0, just_eval_path)
                 
-                from evaluate import score_eval, gpt_eval, report
+                # Import from just_eval package (not relative)
+                from just_eval.evaluate import score_eval, gpt_eval, report
                 
                 # Args for Just-Eval with Groq
                 class JustEvalArgs:
@@ -475,7 +485,7 @@ if args.eval_mode:
                         self.end_idx = -1
                         self.max_words_to_eval = -1
                         self.api_key = args.GPT_API
-                        # Original Groq model - no mapping
+                        # Original Groq model
                         self.model = "llama-3.3-70b-versatile"
                         self.engine = None
                         self.temperature = 0.0

@@ -14,11 +14,6 @@ echo ""
 echo "🛡️  RETOKENIZATION DEFENSE"
 echo "=========================="
 
-echo "[22/42] Retokenization + AdvBench"
-python defense.py --model_name llama2 --attacker AdvBench --defender Retokenization --disable_GPT_judge --device 0 --GPT_API "$API_KEY"
-
-echo "[23/42] Retokenization + SAP30"
-python defense.py --model_name llama2 --attacker SAP30 --defender Retokenization --disable_GPT_judge --device 0 --GPT_API "$API_KEY"
 
 echo "[24/42] Retokenization + HEx-PHI"
 python defense.py --model_name llama2 --attacker HEx-PHI --defender Retokenization --disable_GPT_judge --device 0 --GPT_API "$API_KEY"

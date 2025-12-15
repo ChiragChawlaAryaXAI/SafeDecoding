@@ -1,0 +1,8 @@
+{
+    "input_file": "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_AdvBench_50_2025-12-15 05:42:13/Retokenization_llama2_AdvBench_50_2025-12-15 05:42:13.json",
+    "total_samples": 50,
+    "harmful_score": 1.0,
+    "asr_percentage": 8.0,
+    "defense_success_count": 46,
+    "judge_model": "meta-llama/llama-3.3-70b-instruct:free"
+}

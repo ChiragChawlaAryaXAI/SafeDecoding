@@ -14,32 +14,29 @@ from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from safe_eval_openrouter import DictJudge, GPTJudge_OpenRouter
 
-# Configuration
-API_KEY = "daaldo"
+API_KEY = "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"
 JUDGE_MODEL = "meta-llama/llama-3.3-70b-instruct:free"  # Free model
 
 # Files to evaluate
 FILES_TO_EVAL = [
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_AdvBench_520_2025-12-13 13:05:41/nodefense_llama2_AdvBench_520_2025-12-13 13:05:41.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_AutoDAN_50_2025-12-13 15:05:08/nodefense_llama2_AutoDAN_50_2025-12-13 15:05:08.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_DeepInception_50_2025-12-13 15:20:03/nodefense_llama2_DeepInception_50_2025-12-13 15:20:03.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_GCG_50_2025-12-13 14:59:03/nodefense_llama2_GCG_50_2025-12-13 14:59:03.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_HEx-PHI_300_2025-12-13 14:21:19/nodefense_llama2_HEx-PHI_300_2025-12-13 14:21:19.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_PAIR_50_2025-12-13 15:10:46/nodefense_llama2_PAIR_50_2025-12-13 15:10:46.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/nodefense_llama2_SAP30_240_2025-12-13 13:53:55/nodefense_llama2_SAP30_240_2025-12-13 13:53:55.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_AdvBench_520_2025-12-13 06:24:46/SafeDecoding_llama2_AdvBench_520_2025-12-13 06:24:46.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_AutoDAN_50_2025-12-13 12:41:19/SafeDecoding_llama2_AutoDAN_50_2025-12-13 12:41:19.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_DeepInception_50_2025-12-13 12:54:26/SafeDecoding_llama2_DeepInception_50_2025-12-13 12:54:26.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_GCG_50_2025-12-13 12:35:31/SafeDecoding_llama2_GCG_50_2025-12-13 12:35:31.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_HEx-PHI_300_2025-12-13 11:57:41/SafeDecoding_llama2_HEx-PHI_300_2025-12-13 11:57:41.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_PAIR_50_2025-12-13 12:47:14/SafeDecoding_llama2_PAIR_50_2025-12-13 12:47:14.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/SafeDecoding_llama2_SAP30_240_2025-12-13 11:29:16/SafeDecoding_llama2_SAP30_240_2025-12-13 11:29:16.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_AdvBench_50_2025-12-15 05:32:33/PPL_llama2_AdvBench_50_2025-12-15 05:32:33.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_AutoDAN_50_2025-12-15 07:19:08/PPL_llama2_AutoDAN_50_2025-12-15 07:19:08.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_DeepInception_50_2025-12-15 07:34:12/PPL_llama2_DeepInception_50_2025-12-15 07:34:12.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_HEx-PHI_300_2025-12-15 06:30:20/PPL_llama2_HEx-PHI_300_2025-12-15 06:30:20.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_PAIR_50_2025-12-15 07:24:49/PPL_llama2_PAIR_50_2025-12-15 07:24:49.json",
-    "/home/jovyan/SafeDecoding/exp_outputs/PPL_llama2_SAP30_240_2025-12-15 05:37:20/PPL_llama2_SAP30_240_2025-12-15 05:37:20.json",
+
+    # Retokenization
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_AdvBench_50_2025-12-15 05:42:13/Retokenization_llama2_AdvBench_50_2025-12-15 05:42:13.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_AutoDAN_50_2025-12-15 09:55:12/Retokenization_llama2_AutoDAN_50_2025-12-15 09:55:12.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_DeepInception_50_2025-12-15 10:28:15/Retokenization_llama2_DeepInception_50_2025-12-15 10:28:15.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_GCG_50_2025-12-15 09:41:33/Retokenization_llama2_GCG_50_2025-12-15 09:41:33.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_HEx-PHI_300_2025-12-15 08:03:38/Retokenization_llama2_HEx-PHI_300_2025-12-15 08:03:38.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_PAIR_50_2025-12-15 10:09:20/Retokenization_llama2_PAIR_50_2025-12-15 10:09:20.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_SAP30_240_2025-12-15 05:54:06/Retokenization_llama2_SAP30_240_2025-12-15 05:54:06.json",
+    
+    # Self-Exam
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_AdvBench_50_2025-12-15 07:47:41/Self-Exam_llama2_AdvBench_50_2025-12-15 07:47:41.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_AutoDAN_50_2025-12-15 11:01:29/Self-Exam_llama2_AutoDAN_50_2025-12-15 11:01:29.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_DeepInception_50_2025-12-15 11:40:26/Self-Exam_llama2_DeepInception_50_2025-12-15 11:40:26.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_GCG_50_2025-12-15 10:47:20/Self-Exam_llama2_GCG_50_2025-12-15 10:47:20.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_HEx-PHI_300_2025-12-15 09:03:13/Self-Exam_llama2_HEx-PHI_300_2025-12-15 09:03:13.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_PAIR_50_2025-12-15 11:16:23/Self-Exam_llama2_PAIR_50_2025-12-15 11:16:23.json",
+    "/home/jovyan/SafeDecoding/exp_outputs/Self-Exam_llama2_SAP30_240_2025-12-15 07:54:18/Self-Exam_llama2_SAP30_240_2025-12-15 07:54:18.json",
 ]
 
 def evaluate_file(input_file, output_dir, judge_model, api_key):

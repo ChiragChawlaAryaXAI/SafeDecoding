@@ -1,0 +1,8 @@
+{
+    "input_file": "/home/jovyan/SafeDecoding/exp_outputs/Retokenization_llama2_AutoDAN_50_2025-12-15 09:55:12/Retokenization_llama2_AutoDAN_50_2025-12-15 09:55:12.json",
+    "total_samples": 50,
+    "harmful_score": 1.0,
+    "asr_percentage": 22.0,
+    "defense_success_count": 39,
+    "judge_model": "meta-llama/llama-3.3-70b-instruct:free"
+}

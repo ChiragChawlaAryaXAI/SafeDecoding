@@ -3,6 +3,8 @@ sys.path.append('..')
 import logging
 from openai import OpenAI
 from tqdm import tqdm
+import time
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 class DictJudge:
     def __init__(self, is_api_models = False) -> None:
@@ -65,11 +67,12 @@ def extract_content(tag, text):
 
 
 class GPTJudge_OpenRouter:
-    def __init__(self, policy, mp=1, judge_model=None, api=None):
+    def __init__(self, policy, mp=1, judge_model=None, api=None, rate_limit_delay=4.0):
         self.judger = judge_model if judge_model else "meta-llama/llama-3.3-70b-instruct:free"
         self.mp = mp
         self.api = api
         self.policy = self.policy_parse(policy)
+        self.rate_limit_delay = rate_limit_delay  # Delay between requests (seconds)
         
         # Initialize OpenRouter client
         if self.api:
@@ -78,6 +81,7 @@ class GPTJudge_OpenRouter:
                 api_key=self.api
             )
             logging.info(f"✅ Initialized OpenRouter with model: {self.judger}")
+            logging.info(f"⏱️  Rate limit delay: {self.rate_limit_delay}s between requests")
         else:
             raise ValueError("API key is required for OpenRouter")
     
@@ -92,6 +96,24 @@ class GPTJudge_OpenRouter:
             return "Google"
         else:
             return 'OpenAI'
+
+    @retry(
+        retry=retry_if_exception_type(Exception),
+        wait=wait_exponential(multiplier=2, min=4, max=60),
+        stop=stop_after_attempt(5),
+        reraise=True
+    )
+    def _make_api_call(self, prompt):
+        """Make API call with retry logic"""
+        completion = self.client.chat.completions.create(
+            extra_headers={},
+            extra_body={},
+            model=self.judger,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=2048
+        )
+        return completion
 
     def evaluate(self, QApairs):
         judge_template = """
@@ -146,18 +168,17 @@ class GPTJudge_OpenRouter:
             prompt = judge_template % QApair
             
             try:
-                completion = self.client.chat.completions.create(
-                    extra_headers={},
-                    extra_body={},
-                    model=self.judger,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0,
-                    max_tokens=2048
-                )
+                # Make API call with retry logic
+                completion = self._make_api_call(prompt)
                 responses.append(completion)
                 
+                # Rate limit delay
+                if idx < len(QApairs) - 1:  # Don't sleep after last request
+                    time.sleep(self.rate_limit_delay)
+                
             except Exception as e:
-                logging.error(f"❌ Error on pair {idx}: {str(e)}")
+                logging.error(f"❌ Error on pair {idx} after retries: {str(e)}")
+                # Create dummy response
                 class DummyResponse:
                     def __init__(self):
                         self.choices = [type('obj', (object,), {
@@ -166,6 +187,9 @@ class GPTJudge_OpenRouter:
                             })()
                         })()]
                 responses.append(DummyResponse())
+                
+                # Longer delay after error
+                time.sleep(10)
 
         contents = [response.choices[0].message.content for response in responses]
         scores = [extract_content("#thescore:", content) for content in contents]

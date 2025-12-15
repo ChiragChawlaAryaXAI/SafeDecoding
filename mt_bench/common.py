@@ -406,44 +406,46 @@ def play_a_match_pair(match: MatchPair, output_file: str):
 
 def chat_completion_openai(model, conv, temperature, max_tokens, api_dict=None):
     import os
-    from openai import OpenAI
+    from groq import Groq
     
     # Get API configuration
     if api_dict is not None:
         api_key = api_dict.get("api_key")
-        api_base = api_dict.get("api_base", "https://api.openai.com/v1")
     else:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        api_base = os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1")
+        api_key = os.environ.get("GROQ_API_KEY")
     
-    # Map GPT models to Fireworks
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not found")
+    
+    # Map GPT models to Groq models
     model_mapping = {
-        'gpt-4': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-        'gpt-4-0314': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-        'gpt-4-0613': 'accounts/fireworks/models/llama-v3p3-70b-instruct',
-        'gpt-3.5-turbo': 'accounts/fireworks/models/qwen3-8b',
+        'gpt-4': 'llama-3.3-70b-versatile',
+        'gpt-4-0314': 'llama-3.3-70b-versatile',
+        'gpt-4-0613': 'llama-3.3-70b-versatile',
+        'gpt-4-turbo': 'llama-3.3-70b-versatile',
+        'gpt-3.5-turbo': 'llama-3.1-8b-instant',
+        'gpt-3.5-turbo-1106': 'llama-3.1-8b-instant',
     }
     
-    actual_model = model_mapping.get(model, model)
+    actual_model = model_mapping.get(model, 'llama-3.3-70b-versatile')
     
-    # Initialize OpenAI client (works with Fireworks)
-    client = OpenAI(api_key=api_key, base_url=api_base)
+    # Initialize Groq client
+    client = Groq(api_key=api_key)
     
     output = API_ERROR_OUTPUT
     for _ in range(API_MAX_RETRY):
         try:
             messages = conv.to_openai_api_messages()
-            response = client.chat.completions.create(
+            completion = client.chat.completions.create(
                 model=actual_model,
                 messages=messages,
-                n=1,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
-            output = response.choices[0].message.content
+            output = completion.choices[0].message.content
             break
         except Exception as e:
-            print(type(e), e)
+            print(f"Groq API Error: {type(e).__name__}: {e}")
             time.sleep(API_RETRY_SLEEP)
     
     return output

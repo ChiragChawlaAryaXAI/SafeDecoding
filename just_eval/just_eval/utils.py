@@ -167,7 +167,7 @@ def openai_chat_request(
     stop: List[str]=None,
     **kwargs,
 ) -> List[str]:
-    """Request evaluation from Fireworks API"""
+    """Request evaluation from Groq API"""
     assert prompt is not None or messages is not None
     
     if messages is None:
@@ -176,25 +176,30 @@ def openai_chat_request(
             {"role": "user", "content": prompt}
         ]
     
-    # Use Fireworks via GPT class
-    model_instance = GPT(model, api=api_key, temperature=temperature)
-    response = model_instance(
-        messages,
-        n=n,  
-        debug=True,
-        max_tokens=max_tokens, 
-        top_p=top_p, 
-        **kwargs
-    )
+    # Initialize Groq client
+    from groq import Groq
+    client = Groq(api_key=api_key)
     
     contents = []
-    for choice in response.choices:
-        if choice.finish_reason not in ['stop', 'length']:
-            raise ValueError(f"Fireworks Finish Reason Error: {choice.finish_reason}")
-        contents.append(choice.message.content)
-
+    for _ in range(n):
+        try:
+            completion = client.chat.completions.create(
+                model=model,  # Use model as-is (no mapping)
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                top_p=top_p,
+            )
+            
+            if completion.choices[0].finish_reason not in ['stop', 'length']:
+                raise ValueError(f"Groq Finish Reason Error: {completion.choices[0].finish_reason}")
+            
+            contents.append(completion.choices[0].message.content)
+        except Exception as e:
+            print(f"Groq API Error: {e}")
+            contents.append("ERROR")
+    
     return contents
-
 
 def fix_inner_quotes(s, filed="preference"):
     def replacer(match):

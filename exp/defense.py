@@ -454,54 +454,55 @@ if args.eval_mode:
         logging.info(f'ASR: {100-(defense_success_count / len(safe_eval_results))*100:.2f}%')
 
     else:
-        # Just-Eval with Fireworks via Python import
-        logging.info("🔥 Running Just-Eval with Fireworks API...")
-        
-        try:
-            # Add just_eval to path - CORRECT PATH
-            just_eval_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../just_eval/just_eval'))
-            if just_eval_path not in sys.path:
-                sys.path.insert(0, just_eval_path)
+            # Just-Eval with Groq API
+            logging.info("🔥 Running Just-Eval with Groq API...")
             
-            from evaluate import score_eval, gpt_eval, report
-            
-            # Args for Just-Eval
-            class JustEvalArgs:
-                def __init__(self):
-                    self.mode = "score_multi"
-                    self.first_file = folder_path+'/'+save_name+'.json'
-                    self.output_file = folder_path+'/'+save_name+'_safe_eval.json'
-                    self.start_idx = 0
-                    self.end_idx = -1
-                    self.max_words_to_eval = -1
-                    self.api_key = args.GPT_API
-                    self.model = "accounts/fireworks/models/llama-v3p3-70b-instruct"
-                    self.engine = None
-                    self.temperature = 0.0
-                    self.max_tokens = 1024
-                    self.save_interval = 3
-                    self.report_only = False
-            
-            je_args = JustEvalArgs()
-            
-            logging.info("📊 Generating evaluation prompts...")
-            results = score_eval(je_args)
-            
-            logging.info("🔥 Evaluating with Fireworks AI...")
-            results = gpt_eval(results, je_args)
-            
-            logging.info("📈 Generating evaluation report...")
-            eval_res = report(results, je_args.mode, je_args)
-            logging.info(f"✅ Just-Eval Results:\n{json.dumps(eval_res, indent=2)}")
-            
-        except Exception as e:
-            logging.error(f"❌ Just-Eval failed: {str(e)}")
-            import traceback
-            logging.error(traceback.format_exc())
-            logging.error("Falling back to basic evaluation...")
-            
-            with open(folder_path+'/'+save_name+'.json', 'r') as f:
-                basic_results = json.load(f)
-            
-            logging.info(f"Generated {len(basic_results)} responses")
-            logging.info("Note: Full Just-Eval metrics unavailable due to error")
+            try:
+                # Add just_eval to path
+                just_eval_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../just_eval/just_eval'))
+                if just_eval_path not in sys.path:
+                    sys.path.insert(0, just_eval_path)
+                
+                from evaluate import score_eval, gpt_eval, report
+                
+                # Args for Just-Eval with Groq
+                class JustEvalArgs:
+                    def __init__(self):
+                        self.mode = "score_multi"
+                        self.first_file = folder_path+'/'+save_name+'.json'
+                        self.output_file = folder_path+'/'+save_name+'_safe_eval.json'
+                        self.start_idx = 0
+                        self.end_idx = -1
+                        self.max_words_to_eval = -1
+                        self.api_key = args.GPT_API
+                        # Original Groq model - no mapping
+                        self.model = "llama-3.3-70b-versatile"
+                        self.engine = None
+                        self.temperature = 0.0
+                        self.max_tokens = 1024
+                        self.save_interval = 3
+                        self.report_only = False
+                
+                je_args = JustEvalArgs()
+                
+                logging.info("📊 Generating evaluation prompts...")
+                results = score_eval(je_args)
+                
+                logging.info("🔥 Evaluating with Groq API...")
+                results = gpt_eval(results, je_args)
+                
+                logging.info("📈 Generating evaluation report...")
+                eval_res = report(results, je_args.mode, je_args)
+                logging.info(f"✅ Just-Eval Results:\n{json.dumps(eval_res, indent=2)}")
+                
+            except Exception as e:
+                logging.error(f"❌ Just-Eval failed: {str(e)}")
+                import traceback
+                logging.error(traceback.format_exc())
+                logging.error("Falling back to basic evaluation...")
+                
+                with open(folder_path+'/'+save_name+'.json', 'r') as f:
+                    basic_results = json.load(f)
+                
+                logging.info(f"Generated {len(basic_results)} responses")
+                logging.info("Note: Full Just-Eval metrics unavailable due to error")

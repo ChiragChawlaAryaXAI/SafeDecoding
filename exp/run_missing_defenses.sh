@@ -1,7 +1,5 @@
 #!/bin/bash
 
-API_KEY="gsk_B1sIpad3AQwp6fKKi0d0Fx8"
-
 echo "🔥 Running Missing Defense Combinations"
 echo "========================================"
 echo "Total: 42 runs (6 defenders × 7 attackers)"

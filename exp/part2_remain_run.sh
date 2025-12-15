@@ -1,6 +1,6 @@
 #!/bin/bash
 
-API_KEY="gsk_B1sIpad3AQwp6fKKi0d0Fx8"
+API_KEY=""
 
 echo "🔥 Running Missing Defense Combinations"
 echo "========================================"

@@ -3,7 +3,6 @@ cd /home/jovyan/SafeDecoding/exp
 cat > run_missing_defenses.sh << 'EOFSCRIPT'
 #!/bin/bash
 
-API_KEY="gsk_B1sIpad3AQwp6fKKi0d0Fx8"
 
 echo "🔥 Running Missing Defense Combinations"
 echo "========================================"

@@ -4,9 +4,16 @@ import copy
 import fastchat 
 
 def load_conversation_template(template_name):
+    # Map to fastchat names
     if template_name == 'llama2':
         template_name = 'llama-2'
+    elif template_name == 'llama3':
+        template_name = 'llama-3'  # ✅ Already exists in fastchat
+    elif template_name == 'qwen':
+        template_name = 'qwen-7b-chat'  # ✅ Already exists in fastchat
+    
     conv_template = fastchat.model.get_conversation_template(template_name)
+    
     if conv_template.name == 'zero_shot':
         conv_template.roles = tuple(['### ' + r for r in conv_template.roles])
         conv_template.sep = '\n'

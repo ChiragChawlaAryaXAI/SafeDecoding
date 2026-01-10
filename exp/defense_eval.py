@@ -27,7 +27,6 @@ from peft import PeftModel
 # Import our improved evaluation
 from safe_eval_improved import MultiJudgeEvaluator
 
-GROQ_API_KEY = "gsk_nUyejN48qRGmxj7"
 
 def get_args():
     parser = argparse.ArgumentParser(description="Safety Experiment - 2 samples per dataset")
@@ -41,12 +40,11 @@ def get_args():
     
     # Dataset selection
     parser.add_argument("--dataset", type=str, default="WildJailbreak",
-                       help="Dataset name (will use local Eval.tsv)")
+                       choices=["NicheHazardQA", "TechHazardQA", "HarmfulQA", "WildJailbreak"],
+                       help="Dataset name to load")
     parser.add_argument("--num_samples", type=int, default=2,
                        help="Number of samples from the dataset (default: 2)")
-    parser.add_argument("--dataset_path", type=str, 
-                       default="./datasets/Eval.tsv",
-                       help="Path to local Eval.tsv file")
+    # REMOVED --dataset_path argument
     
     # Defense parameters
     parser.add_argument("--alpha", type=float, default=3.0)
@@ -63,54 +61,86 @@ def get_args():
     
     return parser.parse_args()
 
-
-def load_local_dataset_samples(dataset_path, num_samples=2):
-    """Load specified number of samples from local Eval.tsv file"""
+def load_local_dataset_samples(dataset_name, num_samples=2):
+    """Load specified number of samples from various datasets"""
     
     samples = []
     
     try:
-        # Check if file exists
-        if not os.path.exists(dataset_path):
-            raise FileNotFoundError(f"Dataset file not found at {dataset_path}")
+        from datasets import load_dataset  # Add import here
+        logging.info(f"Loading dataset: {dataset_name}")
         
-        # Load the TSV file
-        logging.info(f"Loading dataset from: {dataset_path}")
-        df = pd.read_csv(dataset_path, sep='\t')
+        # Load dataset based on name
+        if dataset_name == "NicheHazardQA":
+            ds = load_dataset("SoftMINER-Group/NicheHazardQA", split="train")
+            question_key = "question"
+            dataset_prefix = "NH"
+            
+        elif dataset_name == "TechHazardQA":
+            ds = load_dataset("SoftMINER-Group/TechHazardQA", split="train")
+            question_key = "question"
+            dataset_prefix = "TH"
+            
+        elif dataset_name == "HarmfulQA":
+            ds = load_dataset("declare-lab/HarmfulQA", split="train")
+            question_key = "question"
+            dataset_prefix = "HQ"
+            
+        elif dataset_name == "WildJailbreak":
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            eval_path = os.path.join(base_dir, "..", "datasets", "Eval.tsv")  # FIX: Added ".."
+            
+            logging.info(f"Looking for WildJailbreak at: {os.path.abspath(eval_path)}")
+            
+            ds = load_dataset(
+                "csv",
+                data_files=eval_path,
+                delimiter="\t",
+                split="train",
+            )
+            question_key = "adversarial"
+            dataset_prefix = "WJ"
+            
+        else:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
         
-        # Log the structure of the dataframe
-        logging.info(f"Dataset shape: {df.shape}")
-        logging.info(f"Columns: {list(df.columns)}")
+        # Log the structure
+        logging.info(f"Dataset shape: {len(ds)} samples")
+        logging.info(f"Columns: {list(ds.column_names)}")
         
         # Sample the data
-        if len(df) < num_samples:
-            logging.warning(f"Dataset only has {len(df)} samples, using all of them")
-            sampled_df = df
+        if len(ds) < num_samples:
+            logging.warning(f"Dataset only has {len(ds)} samples, using all of them")
+            sampled_indices = range(len(ds))
         else:
-            # Randomly sample or take first N samples
-            sampled_df = df.sample(n=num_samples, random_state=42) if num_samples < len(df) else df.head(num_samples)
+            # Randomly sample indices
+            import random
+            random.seed(42)
+            sampled_indices = random.sample(range(len(ds)), num_samples)
         
         # Convert to our format
-        for i, (idx, row) in enumerate(sampled_df.iterrows()):
-            # Extract the adversarial prompt - this should be your main column
-            adversarial_prompt = row.get('adversarial', '')
+        for i, idx in enumerate(sampled_indices):
+            row = ds[idx]
+            
+            # Get the question using the appropriate key
+            adversarial_prompt = row.get(question_key, '')
             
             # Extract other relevant information
             label = row.get('label', 0)
             data_type = row.get('data_type', 'unknown')
             
             sample = {
-                'id': f"WJ_{i}",
-                'dataset': 'WildJailbreak_Local',
-                'goal': adversarial_prompt,  # Using the adversarial prompt as the goal
-                'prompt': adversarial_prompt,  # Using the adversarial prompt
+                'id': f"{dataset_prefix}_{i}",
+                'dataset': dataset_name,
+                'goal': adversarial_prompt,
+                'prompt': adversarial_prompt,
                 'category': data_type,
                 'original_label': label,
                 'original_index': idx
             }
             samples.append(sample)
                 
-        logging.info(f"✅ Loaded {len(samples)} samples from local dataset")
+        logging.info(f"✅ Loaded {len(samples)} samples from {dataset_name}")
         
         # Log first sample for verification
         if samples:
@@ -119,9 +149,10 @@ def load_local_dataset_samples(dataset_path, num_samples=2):
         return samples
         
     except Exception as e:
-        logging.error(f"❌ Failed to load dataset from {dataset_path}: {str(e)}")
+        logging.error(f"❌ Failed to load dataset {dataset_name}: {str(e)}")
+        import traceback
+        logging.error(traceback.format_exc())  # Add detailed error trace
         return []
-
 
 def setup_model(args):
     """Setup model and tokenizer"""
@@ -241,7 +272,6 @@ def run_safety_experiment():
     logging.info("🧪 Starting Safety Experiment")
     logging.info(f"Model: {args.model_name}, Defender: {args.defender}")
     logging.info(f"Dataset: {args.dataset}, Samples: {args.num_samples}")
-    logging.info(f"Dataset path: {args.dataset_path}")
     
     # Check API key
     groq_api_key = args.groq_api_key or os.getenv('GROQ_API_KEY')
@@ -252,12 +282,12 @@ def run_safety_experiment():
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     
-    # Load dataset from local file
-    logging.info(f"📊 Loading samples from local dataset...")
-    all_samples = load_local_dataset_samples(args.dataset_path, num_samples=args.num_samples)
+    # Load dataset - FIXED LINE
+    logging.info(f"📊 Loading samples from dataset...")
+    all_samples = load_local_dataset_samples(args.dataset, num_samples=args.num_samples)  # CHANGED THIS LINE
     
     if len(all_samples) == 0:
-        logging.error("❌ No samples loaded! Please check your dataset path and file.")
+        logging.error("❌ No samples loaded! Please check your dataset.")
         return None
     
     logging.info(f"📊 Total samples loaded: {len(all_samples)}")
@@ -287,14 +317,13 @@ def run_safety_experiment():
     
     # Save detailed results
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    output_filename = f"safety_experiment_{args.model_name}_{args.defender}_local_{timestamp}.json"
+    output_filename = f"safety_experiment_{args.model_name}_{args.defender}_{args.dataset}_{timestamp}.json"  # Also improved filename
     
     output_data = {
         'experiment_config': {
             'model_name': args.model_name,
             'defender': args.defender,
             'dataset': args.dataset,
-            'dataset_path': args.dataset_path,
             'num_samples': args.num_samples,
             'alpha': args.alpha,
             'first_m': args.first_m,
